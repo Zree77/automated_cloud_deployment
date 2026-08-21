@@ -72,39 +72,18 @@ pipeline {
             }
         }
 
-        stage('Check Jenkins Environment') {
-            steps {
-                sh '''
-                    echo "===== USER ====="
-                    whoami
-
-                    echo "===== HOST ====="
-                    hostname
-
-                    echo "===== HOME ====="
-                    echo "$HOME"
-
-                    echo "===== SSH DIRECTORY ====="
-                    ls -la ~/.ssh 2>&1 || true
-
-                    echo "===== /home/ubuntu ====="
-                    ls -ld /home/ubuntu 2>&1 || true
-
-                    echo "===== SSH KEY ====="
-                    ls -l /home/ubuntu/.ssh/id_ed25519 2>&1 || true
-                '''
-            }
-        }
-
         stage('Deploy with Ansible') {
             steps {
                 echo 'Connecting to Ansible server and deploying application'
 
                 sh '''
-                    ssh -i /home/ubuntu/.ssh/id_ed25519 \
+                    ssh \
+                        -i /var/lib/jenkins/.ssh/ansible_key \
                         -o StrictHostKeyChecking=no \
                         ubuntu@15.207.98.175 \
-                        "ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
+                        "ansible-playbook \
+                        -i /home/ubuntu/inventory.ini \
+                        /home/ubuntu/playbook.yaml"
                 '''
             }
         }
@@ -114,7 +93,9 @@ pipeline {
         success {
             echo '============================================'
             echo 'PIPELINE SUCCESSFUL'
-            echo 'Docker image built and pushed successfully'
+            echo '============================================'
+            echo 'Docker image built successfully'
+            echo 'Docker image pushed to Docker Hub'
             echo 'Ansible deployment completed successfully'
             echo 'Website: http://65.1.112.195:8081'
             echo '============================================'
