@@ -54,7 +54,7 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'docker-cred',
-                        usernameVariable: 'DOCKER_USERNAME'0,
+                        usernameVariable: 'DOCKER_USERNAME',
                         passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
@@ -71,42 +71,43 @@ pipeline {
                 }
             }
         }
-stage('Check Jenkins Environment') {
-    steps {
-        sh '''
-            echo "===== USER ====="
-            whoami
 
-            echo "===== HOST ====="
-            hostname
+        stage('Check Jenkins Environment') {
+            steps {
+                sh '''
+                    echo "===== USER ====="
+                    whoami
 
-            echo "===== HOME ====="
-            echo "$HOME"
+                    echo "===== HOST ====="
+                    hostname
 
-            echo "===== SSH DIRECTORY ====="
-            ls -la ~/.ssh 2>&1 || true
+                    echo "===== HOME ====="
+                    echo "$HOME"
 
-            echo "===== /home/ubuntu ====="
-            ls -ld /home/ubuntu 2>&1 || true
+                    echo "===== SSH DIRECTORY ====="
+                    ls -la ~/.ssh 2>&1 || true
 
-            echo "===== SSH KEY ====="
-            ls -l /home/ubuntu/.ssh/id_ed25519 2>&1 || true
-        '''
-    }
-}
+                    echo "===== /home/ubuntu ====="
+                    ls -ld /home/ubuntu 2>&1 || true
+
+                    echo "===== SSH KEY ====="
+                    ls -l /home/ubuntu/.ssh/id_ed25519 2>&1 || true
+                '''
+            }
+        }
 
         stage('Deploy with Ansible') {
-    steps {
-        echo 'Connecting to Ansible server and deploying application'
+            steps {
+                echo 'Connecting to Ansible server and deploying application'
 
-        sh '''
-            ssh -i /home/ubuntu/.ssh/id_ed25519 \
-                -o StrictHostKeyChecking=no \
-                ubuntu@15.207.98.175 \
-                "ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
-        '''
-    }
-}
+                sh '''
+                    ssh -i /home/ubuntu/.ssh/id_ed25519 \
+                        -o StrictHostKeyChecking=no \
+                        ubuntu@15.207.98.175 \
+                        "ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
+                '''
+            }
+        }
     }
 
     post {
@@ -122,7 +123,7 @@ stage('Check Jenkins Environment') {
         failure {
             echo '============================================'
             echo 'PIPELINE FAILED'
-            echo 'Check the Jenkins console output'
+            echo 'Check the console output above.'
             echo '============================================'
         }
 
