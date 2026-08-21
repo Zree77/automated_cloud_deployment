@@ -73,17 +73,17 @@ pipeline {
         }
 
         stage('Deploy with Ansible') {
-            steps {
-                echo 'Connecting to Ansible server and deploying application'
+    steps {
+        echo 'Connecting to Ansible server and deploying application'
 
-                sh '''
-                    ssh -o StrictHostKeyChecking=no ubuntu@15.207.98.175 \
-                    "ansible-playbook \
-                    -i /home/ubuntu/inventory \
-                    /home/ubuntu/playbook.yaml"
-                '''
-            }
-        }
+        sh '''
+            ssh -i /home/ubuntu/.ssh/id_ed25519 \
+                -o StrictHostKeyChecking=no \
+                ubuntu@15.207.98.175 \
+                "ansible-playbook -i /home/ubuntu/inventory.ini /home/ubuntu/playbook.yaml"
+        '''
+    }
+}
     }
 
     post {
