@@ -54,7 +54,7 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'docker-cred',
-                        usernameVariable: 'DOCKER_USERNAME',
+                        usernameVariable: 'DOCKER_USERNAME'0,
                         passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
@@ -71,6 +71,29 @@ pipeline {
                 }
             }
         }
+stage('Check Jenkins Environment') {
+    steps {
+        sh '''
+            echo "===== USER ====="
+            whoami
+
+            echo "===== HOST ====="
+            hostname
+
+            echo "===== HOME ====="
+            echo "$HOME"
+
+            echo "===== SSH DIRECTORY ====="
+            ls -la ~/.ssh 2>&1 || true
+
+            echo "===== /home/ubuntu ====="
+            ls -ld /home/ubuntu 2>&1 || true
+
+            echo "===== SSH KEY ====="
+            ls -l /home/ubuntu/.ssh/id_ed25519 2>&1 || true
+        '''
+    }
+}
 
         stage('Deploy with Ansible') {
     steps {
