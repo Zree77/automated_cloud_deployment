@@ -7,8 +7,10 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
+                echo 'Checking out source code from GitHub'
                 checkout scm
             }
         }
@@ -16,19 +18,69 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Building Docker image ${IMAGE_NAME}:${IMAGE_TAG}"
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                sh "docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest"
+
+                sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                """
             }
         }
 
         stage('Test') {
             steps {
-                echo 'Build succeeded — running smoke check'
+                echo 'Running Docker container smoke test'
+
                 sh '''
-                    docker run -d --name lab-web-test -p 8082:80 ${IMAGE_NAME}:latest
-                    sleep 3
-                    curl -f http://localhost:8082 || (docker logs lab-web-test && exit 1)
+                    docker rm -f lab-web-test 2>/dev/null || true
+
+                    docker run -d \
+                        --name lab-web-test \
+                        -p 8082:80 \
+                        ${IMAGE_NAME}:latest
+
+                    sleep 5
+
+                    curl -f http://localhost:8082
+
                     docker rm -f lab-web-test
+                '''
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                echo "Pushing ${IMAGE_NAME}:${IMAGE_TAG} to Docker Hub"
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'docker-cred',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login \
+                            --username "$DOCKER_USERNAME" \
+                            --password-stdin
+
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_NAME}:latest
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy with Ansible') {
+            steps {
+                echo 'Connecting to Ansible server and deploying application'
+
+                sh '''
+                    ssh -o StrictHostKeyChecking=no ubuntu@15.207.98.175 \
+                    "ansible-playbook \
+                    -i /home/ubuntu/inventory \
+                    /home/ubuntu/playbook.yaml"
                 '''
             }
         }
@@ -36,12 +88,23 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline succeeded: ${IMAGE_NAME}:${IMAGE_TAG}"
+            echo '============================================'
+            echo 'PIPELINE SUCCESSFUL'
+            echo 'Docker image built and pushed successfully'
+            echo 'Ansible deployment completed successfully'
+            echo 'Website: http://65.1.112.195:8081'
+            echo '============================================'
         }
+
         failure {
-            echo 'Pipeline failed — check console output above.'
+            echo '============================================'
+            echo 'PIPELINE FAILED'
+            echo 'Check the Jenkins console output'
+            echo '============================================'
         }
+
         always {
+            sh 'docker rm -f lab-web-test 2>/dev/null || true'
             sh 'docker image prune -f || true'
         }
     }
